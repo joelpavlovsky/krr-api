@@ -48,10 +48,9 @@ def __process_type(_T: type) -> type:
         return str  # If the type is unknown, just use str and let pydantic handle it
 
 
-def load_commands():
+def load_commands() -> None:
     for strategy_name, strategy_type in BaseStrategy.get_all().items():  # type: ignore
         # NOTE: This wrapper here is needed to avoid the strategy_name being overwritten in the loop
-	
         def strategy_wrapper(_strategy_name: str = strategy_name):
             def run_strategy(
                 ctx: typer.Context,
@@ -275,16 +274,16 @@ def load_commands():
 
                 try:
                     config = Config(
-                        kubeconfig="../.kube/config",
+                        kubeconfig=kubeconfig,
                         impersonate_user=impersonate_user,
                         impersonate_group=impersonate_group,
                         clusters="*" if all_clusters else clusters,
-                        namespaces=["test-stories"],
+                        namespaces="*" if "*" in namespaces else namespaces,
                         resources="*" if "*" in resources else resources,
                         selector=selector,
-                        prometheus_url="https://compute-mimir.apps.medone-hub.med.one/prometheus",
+                        prometheus_url=prometheus_url,
                         prometheus_auth_header=prometheus_auth_header,
-                        prometheus_other_headers=["X-Scope-OrgID: medone-1"],
+                        prometheus_other_headers=prometheus_other_headers,
                         prometheus_ssl_enabled=prometheus_ssl_enabled,
                         prometheus_cluster_label=prometheus_cluster_label,
                         prometheus_label=prometheus_label,
@@ -340,8 +339,7 @@ def load_commands():
             )
 
             app.command(rich_help_panel="Strategies")(run_strategy)
-
-
+            
         strategy_wrapper()
 
 

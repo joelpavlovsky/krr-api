@@ -23,7 +23,7 @@ from robusta_krr.utils.version import get_version
 app = typer.Typer(
     pretty_exceptions_show_locals=False,
     pretty_exceptions_short=True,
-    no_args_is_help=True,
+    no_args_is_help=False,
     help="IMPORTANT: Run `krr simple --help` to see all cli flags!",
 )
 
@@ -48,10 +48,11 @@ def __process_type(_T: type) -> type:
         return str  # If the type is unknown, just use str and let pydantic handle it
 
 
-def load_commands() -> None:
+def load_commands():
     for strategy_name, strategy_type in BaseStrategy.get_all().items():  # type: ignore
         # NOTE: This wrapper here is needed to avoid the strategy_name being overwritten in the loop
-        def strategy_wrapper(_strategy_name: str = strategy_name):
+	
+        def strategy_wrapper(_strategy_name: str = "simple"):
             def run_strategy(
                 ctx: typer.Context,
                 kubeconfig: Optional[str] = typer.Option(
@@ -273,17 +274,28 @@ def load_commands() -> None:
                     raise click.BadOptionUsage("--exclude-severity", "--exclude-severity works only with format=csv")
 
                 try:
+                    joel = {
+        'history_duration': '336',
+        'timeframe_duration': '1.25',
+        'cpu_request': '66',
+        'cpu_limit': '96',
+        'memory_buffer_percentage': '15',
+        'points_required': '100',
+        'allow_hpa': False,
+        'use_oomkill_data': False,
+        'oom_memory_buffer_percentage': '25'
+        }
                     config = Config(
-                        kubeconfig=kubeconfig,
+                        kubeconfig="../.kube/config",
                         impersonate_user=impersonate_user,
                         impersonate_group=impersonate_group,
                         clusters="*" if all_clusters else clusters,
-                        namespaces="*" if "*" in namespaces else namespaces,
+                        namespaces=["test-stories"],
                         resources="*" if "*" in resources else resources,
                         selector=selector,
-                        prometheus_url=prometheus_url,
+                        prometheus_url="https://compute-mimir.apps.medone-hub.med.one/prometheus",
                         prometheus_auth_header=prometheus_auth_header,
-                        prometheus_other_headers=prometheus_other_headers,
+                        prometheus_other_headers=["X-Scope-OrgID: medone-1"],
                         prometheus_ssl_enabled=prometheus_ssl_enabled,
                         prometheus_cluster_label=prometheus_cluster_label,
                         prometheus_label=prometheus_label,
@@ -301,15 +313,15 @@ def load_commands() -> None:
                         verbose=verbose,
                         cpu_min_value=cpu_min_value,
                         memory_min_value=memory_min_value,
-                        quiet=quiet,
+                        quiet=True,
                         log_to_stderr=log_to_stderr,
                         width=width,
                         file_output=file_output,
                         file_output_dynamic=file_output_dynamic,
                         slack_output=slack_output,
                         show_severity=show_severity,
-                        strategy=_strategy_name,
-                        other_args=strategy_args,
+                        strategy="simple",
+                        other_args=joel,
                     )
                     Config.set_config(config)
                 except ValidationError:
@@ -318,8 +330,7 @@ def load_commands() -> None:
                     runner = Runner()
                     exit_code = asyncio.run(runner.run())
                     raise typer.Exit(code=exit_code)
-
-            run_strategy.__name__ = strategy_name
+            run_strategy.__name__ = "simple"
             signature = inspect.signature(run_strategy)
             run_strategy.__signature__ = signature.replace(  # type: ignore
                 parameters=list(signature.parameters.values())[:-1]
@@ -338,16 +349,16 @@ def load_commands() -> None:
                     for field_name, field_meta in strategy_type.get_settings_type().__fields__.items()
                 ]
             )
-
+            
             app.command(rich_help_panel="Strategies")(run_strategy)
-
+         
         strategy_wrapper()
-
+      
+            
 
 def run() -> None:
     load_commands()
     app()
-
 
 if __name__ == "__main__":
     run()

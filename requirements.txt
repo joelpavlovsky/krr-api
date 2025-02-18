@@ -47,10 +47,12 @@ shellingham==1.5.4 ; python_version >= "3.9" and python_full_version < "3.13"
 six==1.16.0 ; python_version >= "3.9" and python_full_version < "3.13"
 slack-sdk==3.27.1 ; python_version >= "3.9" and python_full_version < "3.13"
 typer[all]==0.7.0 ; python_version >= "3.9" and python_full_version < "3.13"
-typing-extensions==4.6.0 ; python_version >= "3.9" and python_full_version < "3.13"
+typing-extensions==4.12.2 ; python_version >= "3.9" and python_full_version < "3.13"
 tzdata==2024.1 ; python_version >= "3.9" and python_full_version < "3.13"
 tzlocal==5.2 ; python_version >= "3.9" and python_full_version < "3.13"
 urllib3==1.26.19 ; python_version >= "3.9" and python_full_version < "3.13"
 websocket-client==1.7.0 ; python_version >= "3.9" and python_full_version < "3.13"
 zipp==3.19.2 ; python_version >= "3.9" and python_version < "3.13"
 tenacity==9.0.0 ; python_version >= "3.9" and python_version < "3.13"
+fastapi==0.115.8
+uvicorn==0.34.0
