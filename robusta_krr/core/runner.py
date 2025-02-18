@@ -310,7 +310,8 @@ class Runner:
             raise CriticalRunnerException("No objects available to scan.")
         elif len(successful_scans) == 0:
             raise CriticalRunnerException("No successful scans were made. Check the logs for more information.")
-
+        
+        print(cluster_summary)
         return Result(
             scans=successful_scans,
             description=f"[b]{self._strategy.display_name.title()} Strategy[/b]\n\n{self._strategy.description}",
@@ -345,6 +346,7 @@ class Runner:
 
             result = await self._collect_result()
             logger.info("Result collected, displaying...")
+            print(result)
             self._process_result(result)
         except (ClusterNotSpecifiedException, CriticalRunnerException) as e:
             logger.critical(e)
