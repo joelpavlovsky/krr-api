@@ -11,7 +11,10 @@ class MemoryLoader(PrometheusMetric):
     query_type: QueryType = QueryType.QueryRange
 
     def get_query(self, object: K8sObjectData, duration: str, step: str) -> str:
-        pods_selector = "|".join(pod.name for pod in object.pods)
+        if object.kind == "VirtualMachine":
+            pods_selector = f"virt-launcher-{object.name}-.*"
+        else:
+            pods_selector = "|".join(pod.name for pod in object.pods)
         cluster_label = self.get_prometheus_cluster_label()
         return f"""
             max(
@@ -31,7 +34,10 @@ class MaxMemoryLoader(PrometheusMetric):
     """
 
     def get_query(self, object: K8sObjectData, duration: str, step: str) -> str:
-        pods_selector = "|".join(pod.name for pod in object.pods)
+        if object.kind == "VirtualMachine":
+            pods_selector = f"virt-launcher-{object.name}-.*"
+        else:
+            pods_selector = "|".join(pod.name for pod in object.pods)
         cluster_label = self.get_prometheus_cluster_label()
         return f"""
             max_over_time(
@@ -54,7 +60,10 @@ class MemoryAmountLoader(PrometheusMetric):
     """
 
     def get_query(self, object: K8sObjectData, duration: str, step: str) -> str:
-        pods_selector = "|".join(pod.name for pod in object.pods)
+        if object.kind == "VirtualMachine":
+            pods_selector = f"virt-launcher-{object.name}-.*"
+        else:
+            pods_selector = "|".join(pod.name for pod in object.pods)
         cluster_label = self.get_prometheus_cluster_label()
         return f"""
             count_over_time(
@@ -79,7 +88,10 @@ class MaxOOMKilledMemoryLoader(PrometheusMetric):
     warning_on_no_data = False
 
     def get_query(self, object: K8sObjectData, duration: str, step: str) -> str:
-        pods_selector = "|".join(pod.name for pod in object.pods)
+        if object.kind == "VirtualMachine":
+            pods_selector = f"virt-launcher-{object.name}-.*"
+        else:
+            pods_selector = "|".join(pod.name for pod in object.pods)
         cluster_label = self.get_prometheus_cluster_label()
         return f"""
             max_over_time(

@@ -103,6 +103,7 @@ class ClusterLoader:
             self._list_rollouts(),
             self._list_strimzipodsets(),
             self._list_deploymentconfig(),
+            self._list_virtualmachines(),
             self._list_all_statefulsets(),
             self._list_all_daemon_set(),
             self._list_all_jobs(),
@@ -424,6 +425,91 @@ class ClusterLoader:
             ),
             extract_containers=lambda item: item.spec.template.spec.containers,
         )
+
+    def _list_virtualmachines(self) -> list[K8sObjectData]:
+        # NOTE: Using custom objects API returns dicts, so we need to wrap it.
+        return self._list_scannable_objects(
+            kind="VirtualMachine",
+            all_namespaces_request=lambda **kwargs: ObjectLikeDict(
+                self.custom_objects.list_cluster_custom_object(
+                    group="kubevirt.io",
+                    version="v1",
+                    plural="virtualmachines",
+                    **kwargs,
+                )
+            ),
+            namespaced_request=lambda namespace, **kwargs: ObjectLikeDict(
+                self.custom_objects.list_namespaced_custom_object(
+                    group="kubevirt.io",
+                    version="v1",
+                    plural="virtualmachines",
+                    namespace=namespace,
+                    **kwargs,
+                )
+            ),
+            extract_containers=self._extract_vm_resources,
+        )
+
+    @staticmethod
+    def _extract_vm_resources(vm: object):
+        """
+        Extract resource data from a KubeVirt VM spec to be compatible with KRR logic.
+        Returns a list with one dummy container-like object with .resources containing cpu/memory.
+        """
+        def get_nested(dct, keys, default=None):
+            """Helper to get nested dict keys safely."""
+            for key in keys:
+                if isinstance(dct, dict):
+                    dct = dct.get(key, default)
+                else:
+                    dct = getattr(dct, key, default)
+                if dct is None:
+                    return default
+            return dct
+
+        # Accepts both dict and attribute-style objects.
+        domain = get_nested(vm, ["spec", "template", "spec", "domain"])
+        resources = get_nested(domain, ["resources"]) if domain else None
+
+        # Extract requests/limits if present, else fall back to hardware
+        requests = get_nested(resources, ["requests"], {}) if resources else {}
+        limits = get_nested(resources, ["limits"], {}) if resources else {}
+
+        # Hardware-level info
+        cpu = get_nested(domain, ["cpu"])
+        memory_guest = get_nested(domain, ["memory", "guest"])
+
+        # If requests/limits are missing, fill from hardware
+        cpu_request = requests.get("cpu")
+        cpu_limit = limits.get("cpu")
+        memory_request = requests.get("memory")
+        memory_limit = limits.get("memory")
+
+        # If not set, use hardware/topology
+        if not cpu_request and cpu:
+            # Compose a CPU string from topology if present
+            cores = cpu.get("cores", 1)
+            sockets = cpu.get("sockets", 1)
+            threads = cpu.get("threads", 1)
+            cpu_request = str(cores * sockets * threads)
+        if not cpu_limit and cpu_request:
+            cpu_limit = cpu_request  # fallback
+        if not memory_request and memory_guest:
+            memory_request = memory_guest
+        if not memory_limit and memory_request:
+            memory_limit = memory_request  # fallback
+
+        # Compose a dummy container-like object
+        class DummyContainer:
+            pass
+        c = DummyContainer()
+        c.name = "compute"  
+        c.resources = type("Resources", (), {
+            "requests": {"cpu": cpu_request, "memory": memory_request},
+            "limits": {"cpu": cpu_limit, "memory": memory_limit}
+        })()
+        return [c]
+    
 
     def _list_all_statefulsets(self) -> list[K8sObjectData]:
         return self._list_scannable_objects(
