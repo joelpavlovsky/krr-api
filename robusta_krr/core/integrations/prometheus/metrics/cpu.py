@@ -11,7 +11,6 @@ class CPULoader(PrometheusMetric):
     query_type: QueryType = QueryType.QueryRange
 
     def get_query(self, object: K8sObjectData, duration: str, step: str) -> str:
-        print(f"\n\nthis is the CPU loader for {object.kind} {object.name} in namespace {object.namespace} and this is the container: {object.container}\n\n")
         if object.kind == "VirtualMachine":
             pods_selector = f"virt-launcher-{object.name}-.*"
         else:
