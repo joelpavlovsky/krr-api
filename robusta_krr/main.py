@@ -265,7 +265,18 @@ def load_commands() -> None:
                     "--slackoutput",
                     help="Send to output to a slack channel, must have SLACK_BOT_TOKEN",
                     rich_help_panel="Output Settings",
+                ),               
+                start_time: Optional[datetime] = typer.Option(
+                    None,
+                    "--start-time", help="Start time for Prometheus queries (RFC3339 or YYYY-MM-DDTHH:MM:SS)",
+                    rich_help_panel="Output Settings",
                 ),
+                end_time: Optional[datetime] = typer.Option(
+                    None, 
+                    "--end-time", help="End time for Prometheus queries (RFC3339 or YYYY-MM-DDTHH:MM:SS)",
+                    rich_help_panel="Output Settings",
+                ),
+             
                 **strategy_args,
             ) -> None:
                 f"""Run KRR using the `{_strategy_name}` strategy"""
@@ -307,6 +318,8 @@ def load_commands() -> None:
                         file_output=file_output,
                         file_output_dynamic=file_output_dynamic,
                         slack_output=slack_output,
+                        start_time=start_time,
+                        end_time=end_time,
                         show_severity=show_severity,
                         strategy=_strategy_name,
                         other_args=strategy_args,

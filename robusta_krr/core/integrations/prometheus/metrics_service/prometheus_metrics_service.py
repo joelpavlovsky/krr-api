@@ -195,7 +195,14 @@ class PrometheusMetricsService(MetricsService):
         logger.debug(f"Gathering {LoaderClass.__name__} metric for {object}")
         try:
             metric_loader = LoaderClass(self.prometheus, self.name(), self.executor)
-            data = await metric_loader.load_data(object, period, step)
+            # --- CHANGED: Use settings.start_time and settings.end_time if provided ---
+            start_time = getattr(settings, "start_time", None)
+            end_time = getattr(settings, "end_time", None)
+            if start_time and end_time:
+                data = await metric_loader.load_data(object, None, step, start=start_time, end=end_time)
+            else:
+                data = await metric_loader.load_data(object, period, step)
+            # --- END CHANGE ---
         except Exception:
             logger.exception("Failed to gather resource history data for %s", object)
             data = {}
@@ -275,8 +282,18 @@ class PrometheusMetricsService(MetricsService):
 
         logger.debug(f"Adding historic pods for {object}")
 
-        days_literal = min(int(period.total_seconds()) // 3600 // 24, 32)
-        period_literal = f"{days_literal}d"
+        # --- CHANGED: Use settings.start_time and settings.end_time if provided ---
+        start_time = getattr(settings, "start_time", None)
+        end_time = getattr(settings, "end_time", None)
+        if start_time and end_time:
+            # Calculate period_literal based on the time difference
+            days_literal = min((end_time - start_time).days, 32)
+            period_literal = f"{days_literal}d"
+        else:
+            days_literal = min(int(period.total_seconds()) // 3600 // 24, 32)
+            period_literal = f"{days_literal}d"
+        # --- END CHANGE ---
+
         pod_owners: Iterable[str]
         pod_owner_kind: str
         cluster_label = self.get_prometheus_cluster_label()
