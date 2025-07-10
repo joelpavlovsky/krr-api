@@ -329,6 +329,10 @@ class PrometheusMetricsService(MetricsService):
             pod_owner_kind = "Job"
 
             del jobs
+        elif object.kind == "VirtualMachine":
+            # KubeVirt pods are owned by VirtualMachineInstance with the same name as the VM
+            pod_owners = [object.name]
+            pod_owner_kind = "VirtualMachineInstance"
         else:
             pod_owners = [object.name]
             pod_owner_kind = object.kind

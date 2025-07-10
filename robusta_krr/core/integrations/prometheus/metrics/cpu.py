@@ -11,7 +11,10 @@ class CPULoader(PrometheusMetric):
     query_type: QueryType = QueryType.QueryRange
 
     def get_query(self, object: K8sObjectData, duration: str, step: str) -> str:
-        pods_selector = "|".join(pod.name for pod in object.pods)
+        if object.kind == "VirtualMachine":
+            pods_selector = f"virt-launcher-{object.name}-.*"
+        else:
+            pods_selector = "|".join(pod.name for pod in object.pods)
         cluster_label = self.get_prometheus_cluster_label()
         return f"""
             max(
@@ -37,7 +40,10 @@ def PercentileCPULoader(percentile: float) -> type[PrometheusMetric]:
 
     class PercentileCPULoader(PrometheusMetric):
         def get_query(self, object: K8sObjectData, duration: str, step: str) -> str:
-            pods_selector = "|".join(pod.name for pod in object.pods)
+            if object.kind == "VirtualMachine":
+                pods_selector = f"virt-launcher-{object.name}-.*"
+            else:
+                pods_selector = "|".join(pod.name for pod in object.pods)
             cluster_label = self.get_prometheus_cluster_label()
             return f"""
                 quantile_over_time(
@@ -65,7 +71,10 @@ class CPUAmountLoader(PrometheusMetric):
     """
 
     def get_query(self, object: K8sObjectData, duration: str, step: str) -> str:
-        pods_selector = "|".join(pod.name for pod in object.pods)
+        if object.kind == "VirtualMachine":
+            pods_selector = f"virt-launcher-{object.name}-.*"
+        else:
+            pods_selector = "|".join(pod.name for pod in object.pods)
         cluster_label = self.get_prometheus_cluster_label()
         return f"""
             count_over_time(
