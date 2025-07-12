@@ -184,10 +184,19 @@ class Runner:
             
             start_time = getattr(settings, "start_time", None)
             end_time = getattr(settings, "end_time", None)
-            if start_time and end_time:
-                period = end_time - start_time
+            history_timedelta = self._strategy.settings.history_timedelta
+
+            if end_time:
+                end_time = end_time.replace(second=0, microsecond=0)
+                if start_time:
+                    start_time = start_time.replace(second=0, microsecond=0)
+                else:
+                    start_time = end_time - history_timedelta
             else:
-                period = self._strategy.settings.history_timedelta
+                end_time = datetime.utcnow().replace(second=0, microsecond=0)
+                start_time = end_time - history_timedelta
+
+            period = end_time - start_time
 
             object.pods = await prometheus_loader.load_pods(object, period)
             if object.pods == []:
@@ -225,26 +234,18 @@ class Runner:
         prometheus_loader = self._get_prometheus_loader(cluster)
         if prometheus_loader is None:
             return
-
-        # Use start_time and end_time from settings if provided
-        start_time = getattr(settings, "start_time", None)
-        end_time = getattr(settings, "end_time", None)
-        if start_time and end_time:
-            history_range = (start_time, end_time)
-            logger.debug(f"Using user-provided history range: {history_range} for cluster {cluster}")
-        else:
-            try:
-                history_range = await prometheus_loader.get_history_range(timedelta(hours=5))
-            except ValueError:
-                logger.info(
-                    f"Unable to check how much historical data is available on cluster {cluster}. Will assume it is sufficient and calculate recommendations anyway. (You can usually ignore this. Not all Prometheus compatible metric stores support checking history settings.)"
-                )
-                self.errors.append(
-                    {
-                        "name": "HistoryRangeError",
-                    }
-                )
-                return
+        try:
+            history_range = await prometheus_loader.get_history_range(timedelta(hours=5))
+        except ValueError:
+            logger.info(
+                f"Unable to check how much historical data is available on cluster {cluster}. Will assume it is sufficient and calculate recommendations anyway. (You can usually ignore this. Not all Prometheus compatible metric stores support checking history settings.)"
+            )
+            self.errors.append(
+                {
+                    "name": "HistoryRangeError",
+                }
+            )
+            return
 
         logger.debug(f"History range for {cluster}: {history_range}")
         enough_data = self._strategy.settings.history_range_enough(history_range)
@@ -274,7 +275,6 @@ class Runner:
 
         if recommendation is None:
             return None
-
         return ResourceScan.calculate(
             k8s_object,
             ResourceAllocations(

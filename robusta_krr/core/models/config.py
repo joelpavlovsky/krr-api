@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import sys
 from typing import Any, Literal, Optional, Union
-from datetime import datetime
+import datetime
 
 import pydantic as pd
 from kubernetes import config
@@ -49,8 +49,8 @@ class Config(pd.BaseSettings):
     eks_managed_prom_region: Optional[str] = pd.Field(None)
     coralogix_token: Optional[pd.SecretStr] = pd.Field(None)
     openshift: bool = pd.Field(False)
-    start_time: Optional[datetime] = pd.Field(None)
-    end_time: Optional[datetime] = pd.Field(None)
+    start_time: datetime.datetime = None
+    end_time: datetime.datetime = None
 
     # Threading settings
     max_workers: int = pd.Field(6, ge=1)
@@ -136,7 +136,31 @@ class Config(pd.BaseSettings):
         formatters.find(v)  # NOTE: raises if strategy is not found
         return v
 
- 
+    @pd.validator("start_time", "end_time", pre=True)
+    def validate_datetime_format(cls, v, field):
+        if v is None:
+            return v
+        if isinstance(v, datetime.datetime):
+            return v
+        try:
+            # Accept ISO format or common datetime strings
+            return datetime.datetime.fromisoformat(v)
+        except Exception:
+            raise ValueError(f"{field.name} must be a valid datetime string (ISO format recommended)")
+
+    @pd.root_validator
+    def validate_time_range(cls, values):
+        start_time = values.get("start_time")
+        end_time = values.get("end_time")
+        now = datetime.datetime.utcnow()
+        if start_time and end_time:
+            if start_time > end_time:
+                raise ValueError("start_time must be before or equal to end_time")
+        if start_time and start_time > now:
+            raise ValueError("start_time cannot be in the future")
+        if end_time and end_time > now:
+            raise ValueError("end_time cannot be in the future")
+        return values
 
     @property
     def context(self) -> Optional[str]:

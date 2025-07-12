@@ -172,8 +172,18 @@ class PrometheusMetric(BaseMetric):
         duration_str = self._step_to_string(period)
 
         query = self.get_query(object, duration_str, step_str)
-        end_time = datetime.datetime.utcnow().replace(second=0, microsecond=0)
-        start_time = end_time - period
+        # Use explicit start/end time if provided, else default to now - period
+        start_time = getattr(settings, "start_time", None)
+        end_time = getattr(settings, "end_time", None)
+        if end_time:
+            end_time = end_time.replace(second=0, microsecond=0)
+            if start_time:
+                start_time = start_time.replace(second=0, microsecond=0)
+            else:
+                start_time = end_time - period
+        else:
+            end_time = datetime.datetime.utcnow().replace(second=0, microsecond=0)
+            start_time = end_time - period
 
         # Here if we split the object into multiple sub-objects, we query each sub-object recursively.
         if self.pods_batch_size is not None and object.pods_count > self.pods_batch_size:
