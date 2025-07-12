@@ -268,12 +268,12 @@ def load_commands() -> None:
                 ),               
                 start_time: Optional[datetime] = typer.Option(
                     None,
-                    "--start-time", help="Start time for Prometheus queries (RFC3339 or YYYY-MM-DDTHH:MM:SS)",
+                    "--start-time", help="Start time for Prometheus queries",
                     rich_help_panel="Output Settings",
                 ),
                 end_time: Optional[datetime] = typer.Option(
                     None, 
-                    "--end-time", help="End time for Prometheus queries (RFC3339 or YYYY-MM-DDTHH:MM:SS)",
+                    "--end-time", help="End time for Prometheus queries",
                     rich_help_panel="Output Settings",
                 ),
              

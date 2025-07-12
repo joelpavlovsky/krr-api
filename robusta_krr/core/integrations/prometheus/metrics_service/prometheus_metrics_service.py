@@ -192,17 +192,18 @@ class PrometheusMetricsService(MetricsService):
         """
         ResourceHistoryData: The gathered resource history data.
         """
-        logger.debug(f"Gathering {LoaderClass.__name__} metric for {object}")
+        logger.debug(f"Loading {LoaderClass.__name__} metric for {object} with period {period} and step {step}")
         try:
             metric_loader = LoaderClass(self.prometheus, self.name(), self.executor)
             # --- CHANGED: Use settings.start_time and settings.end_time if provided ---
-            start_time = getattr(settings, "start_time", None)
-            end_time = getattr(settings, "end_time", None)
-            if start_time and end_time:
-                data = await metric_loader.load_data(object, None, step, start=start_time, end=end_time)
-            else:
-                data = await metric_loader.load_data(object, period, step)
+            # start_time = getattr(settings, "start_time", None)
+            # end_time = getattr(settings, "end_time", None)
+            # if start_time and end_time:
+            #     period= end_time - start_time
+            #     logger.debug(
+            #         f"Adjusted period to {period} based on start_time {start_time} and end_time based on {end_time} for {LoaderClass.__name__} metric")
             # --- END CHANGE ---
+            data = await metric_loader.load_data(object, period, step)
         except Exception:
             logger.exception("Failed to gather resource history data for %s", object)
             data = {}
@@ -279,21 +280,19 @@ class PrometheusMetricsService(MetricsService):
             object (K8sObjectData): The Kubernetes object.
             period (timedelta): The time period for which to gather data.
         """
-
         logger.debug(f"Adding historic pods for {object}")
+        logger.debug(f"Loading pods for {object} with period {period}")
+        # start_time = getattr(settings, "start_time", None)
+        # end_time = getattr(settings, "end_time", None)
+        # if start_time and end_time:
+        #     period = end_time - start_time
+        #     logger.debug(
+        #         f"Adjusted period to {period} based on start_time {start_time} and end_time {end_time} for loading pods for {object}"
+        #     )
 
-        # --- CHANGED: Use settings.start_time and settings.end_time if provided ---
-        start_time = getattr(settings, "start_time", None)
-        end_time = getattr(settings, "end_time", None)
-        if start_time and end_time:
-            # Calculate period_literal based on the time difference
-            days_literal = min((end_time - start_time).days, 32)
-            period_literal = f"{days_literal}d"
-        else:
-            days_literal = min(int(period.total_seconds()) // 3600 // 24, 32)
-            period_literal = f"{days_literal}d"
-        # --- END CHANGE ---
-
+        days_literal = min(int(period.total_seconds()) // 3600 // 24, 32)
+        period_literal = f"{days_literal}d"
+        
         pod_owners: Iterable[str]
         pod_owner_kind: str
         cluster_label = self.get_prometheus_cluster_label()

@@ -49,8 +49,8 @@ class Config(pd.BaseSettings):
     eks_managed_prom_region: Optional[str] = pd.Field(None)
     coralogix_token: Optional[pd.SecretStr] = pd.Field(None)
     openshift: bool = pd.Field(False)
-    start_date: Optional[datetime] = pd.Field(None)
-    end_date: Optional[datetime] = pd.Field(None)
+    start_time: Optional[datetime] = pd.Field(None)
+    end_time: Optional[datetime] = pd.Field(None)
 
     # Threading settings
     max_workers: int = pd.Field(6, ge=1)
@@ -135,6 +135,8 @@ class Config(pd.BaseSettings):
     def validate_format(cls, v: str) -> str:
         formatters.find(v)  # NOTE: raises if strategy is not found
         return v
+
+ 
 
     @property
     def context(self) -> Optional[str]:
